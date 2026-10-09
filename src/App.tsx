@@ -536,48 +536,53 @@ function App() {
     setError(null);
   }, []);
 
-  const exportPng = useCallback(async () => {
+  const doExport = useCallback(async (format: 'png' | 'svg') => {
     const el = canvasRef.current?.querySelector('.react-flow__renderer') as HTMLElement | null;
     if (!el) return;
     setExporting(true);
-    try {
-      const dataUrl = await toPng(el, {
-        backgroundColor: '#0d1117',
-        pixelRatio: 2,
-        width: el.offsetWidth,
-        height: el.offsetHeight,
-      });
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      const ts = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
-      a.download = `json-view-${ts}.png`;
-      a.click();
-    } finally {
-      setExporting(false);
-      setShowExport(false);
-    }
-  }, []);
 
-  const exportSvg = useCallback(async () => {
-    const el = canvasRef.current?.querySelector('.react-flow__renderer') as HTMLElement | null;
-    if (!el) return;
-    setExporting(true);
+    // Base options — skipFonts avoids network fetches that cause freezes
+    const base = {
+      backgroundColor: '#0d1117',
+      width: el.offsetWidth,
+      height: el.offsetHeight,
+      skipFonts: true,
+      // Skip React Flow's internal drag/resize handles — not needed in export
+      filter: (node: HTMLElement) => {
+        if (node.classList?.contains('react-flow__handle')) return false;
+        if (node.classList?.contains('react-flow__resize-control')) return false;
+        return true;
+      },
+    };
+
+    // Adapt pixel ratio: large graphs at 1x to avoid canvas size limits
+    const nodeCount = activeGraph?.nodes.length ?? 0;
+    const pixelRatio = nodeCount > 40 ? 1 : 2;
+
+    const ts = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
+
     try {
-      const dataUrl = await toSvg(el, {
-        backgroundColor: '#0d1117',
-        width: el.offsetWidth,
-        height: el.offsetHeight,
-      });
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      const ts = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
-      a.download = `json-view-${ts}.svg`;
-      a.click();
+      if (format === 'svg') {
+        const dataUrl = await toSvg(el, base);
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `json-view-${ts}.svg`;
+        a.click();
+      } else {
+        const dataUrl = await toPng(el, { ...base, pixelRatio });
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `json-view-${ts}.png`;
+        a.click();
+      }
     } finally {
       setExporting(false);
       setShowExport(false);
     }
-  }, []);
+  }, [activeGraph]);
+
+  const exportPng = useCallback(() => doExport('png'), [doExport]);
+  const exportSvg = useCallback(() => doExport('svg'), [doExport]);
 
   const nodeCount = activeGraph?.nodes.length ?? 0;
   const edgeCount = activeGraph?.edges.length ?? 0;
