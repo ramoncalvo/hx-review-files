@@ -331,68 +331,8 @@ function FlowCanvas({
   );
 }
 
-function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
-  const [input, setInput] = useState('');
-  const [wrong, setWrong] = useState(false);
-
-  const attempt = () => {
-    if (input === (import.meta.env.VITE_APP_PASSWORD ?? '')) {
-      onUnlock();
-    } else {
-      setWrong(true);
-      setInput('');
-    }
-  };
-
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, background: '#0d1117',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
-      <div style={{
-        background: '#161b22', border: '1px solid #30363d', borderRadius: 12,
-        padding: '36px 32px', width: 320, display: 'flex', flexDirection: 'column', gap: 16,
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#58a6ff', marginBottom: 4 }}>
-            Ramon <span style={{ color: '#f78166' }}>JSON Viewer</span>
-          </div>
-          <div style={{ fontSize: 12, color: '#8b949e' }}>Enter password to continue</div>
-        </div>
-        <input
-          type="password"
-          autoFocus
-          value={input}
-          onChange={e => { setInput(e.target.value); setWrong(false); }}
-          onKeyDown={e => e.key === 'Enter' && attempt()}
-          placeholder="Password"
-          style={{
-            background: '#0d1117', border: `1px solid ${wrong ? '#f85149' : '#30363d'}`,
-            borderRadius: 6, padding: '8px 12px', color: '#e6edf3',
-            fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box',
-            fontFamily: 'inherit',
-          }}
-        />
-        {wrong && (
-          <div style={{ fontSize: 12, color: '#f85149', marginTop: -8 }}>Incorrect password</div>
-        )}
-        <button
-          onClick={attempt}
-          style={{
-            background: '#238636', border: '1px solid #2ea043', borderRadius: 6,
-            color: '#fff', fontSize: 13, fontWeight: 600, padding: '8px 0',
-            cursor: 'pointer', width: '100%',
-          }}
-        >
-          Unlock
-        </button>
-      </div>
-    </div>
-  );
-}
 
 function App() {
-  const [unlocked, setUnlocked] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('viewer');
   const [jsonText, setJsonText] = useState(SAMPLE_JSON);
@@ -521,7 +461,6 @@ function App() {
   const nodeCount = graph?.nodes.length ?? 0;
   const edgeCount = graph?.edges.length ?? 0;
 
-  if (!unlocked) return <PasswordGate onUnlock={() => setUnlocked(true)} />;
 
   return (
     <div className="app">
