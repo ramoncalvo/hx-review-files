@@ -15,16 +15,20 @@ import '@xyflow/react/dist/style.css';
 import { toPng, toSvg } from 'html-to-image';
 import './App.css';
 import JsonNode from './components/JsonNode';
+import SchemaNode from './components/SchemaNode';
 import CompareView from './components/CompareView';
 import ExcelView from './components/ExcelView';
 import WelcomeModal from './components/WelcomeModal';
 import { jsonToGraph } from './utils/jsonToGraph';
 import type { NodeData } from './utils/jsonToGraph';
+import { jsonToSchemaGraph } from './utils/jsonToSchema';
+import type { SchemaNodeData } from './utils/jsonToSchema';
 import { findKeyRange, getPathAtCursor, scrollTextareaToSelection } from './utils/jsonSync';
 
-type Tab = 'viewer' | 'compare' | 'schema';
+type Tab = 'format' | 'viewer' | 'compare' | 'schema';
+type ViewMode = 'full' | 'schema';
 
-const nodeTypes = { jsonNode: JsonNode };
+const nodeTypes = { jsonNode: JsonNode, schemaNode: SchemaNode };
 
 const SAMPLE_JSON = JSON.stringify(
   {
@@ -293,14 +297,13 @@ function FlowCanvas({
   selectedNodeId,
   onNodeClick,
 }: {
-  nodes: Node<NodeData>[];
+  nodes: Node<NodeData | SchemaNodeData>[];
   edges: Edge[];
   selectedNodeId: string | null;
   onNodeClick: NodeMouseHandler;
 }) {
   useReactFlow();
 
-  // Apply selected flag without mutating original nodes
   const displayNodes = useMemo(() =>
     nodes.map(n => ({ ...n, selected: n.id === selectedNodeId })),
     [nodes, selectedNodeId]
@@ -332,9 +335,116 @@ function FlowCanvas({
 }
 
 
+// ── Format / Pre-process tab ─────────────────────────────────────
+function FormatView({ onSendToViewer }: { onSendToViewer: (text: string, mode?: ViewMode) => void }) {
+  const [raw, setRaw] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const formatted = useMemo(() => {
+    if (!raw.trim()) return '';
+    try {
+      const result = JSON.stringify(JSON.parse(raw), null, 2);
+      setError(null);
+      return result;
+    } catch (e) {
+      setError((e as Error).message);
+      return raw;
+    }
+  }, [raw]);
+
+  const stats = useMemo(() => {
+    if (!raw.trim()) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      const count = (v: unknown): number => {
+        if (Array.isArray(v)) return v.reduce((s, i) => s + count(i), 1);
+        if (v && typeof v === 'object') return Object.values(v).reduce((s: number, i) => s + count(i), 1);
+        return 1;
+      };
+      return {
+        keys: Object.keys(parsed).length,
+        total: count(parsed),
+        size: (new Blob([raw]).size / 1024).toFixed(1),
+      };
+    } catch { return null; }
+  }, [raw]);
+
+  return (
+    <div className="format-root">
+      <div className="format-topbar">
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#8b949e' }}>Paste your raw JSON — format and inspect before sending to Viewer</span>
+        {stats && (
+          <span className="toolbar-info">
+            {stats.size} KB · {stats.total.toLocaleString()} values · {stats.keys} root keys
+          </span>
+        )}
+      </div>
+      <div className="format-body">
+        {/* Input */}
+        <div className="format-panel">
+          <div className="format-panel-header">
+            <span>Raw input</span>
+            <label className="toolbar-btn" style={{ padding: '3px 10px', fontSize: 11 }}>
+              Load file
+              <input type="file" accept=".json,application/json" style={{ display: 'none' }}
+                onChange={e => {
+                  const f = e.target.files?.[0]; if (!f) return;
+                  const r = new FileReader();
+                  r.onload = ev => setRaw(ev.target?.result as string ?? '');
+                  r.readAsText(f); e.target.value = '';
+                }} />
+            </label>
+            <button className="toolbar-btn danger" style={{ padding: '3px 10px', fontSize: 11 }} onClick={() => setRaw('')}>Clear</button>
+          </div>
+          <textarea
+            className="json-textarea"
+            value={raw}
+            onChange={e => setRaw(e.target.value)}
+            placeholder={'Paste minified or raw JSON here…\n\n{"key":"value","arr":[1,2,3]}'}
+            spellCheck={false}
+          />
+          {error && <div className="error-bar">⚠ {error}</div>}
+        </div>
+
+        {/* Output */}
+        <div className="format-panel">
+          <div className="format-panel-header">
+            <span>Formatted</span>
+            <button
+              className="toolbar-btn primary"
+              style={{ padding: '3px 12px', fontSize: 11 }}
+              disabled={!!error || !raw.trim()}
+              onClick={() => onSendToViewer(formatted, 'full')}
+            >
+              Open in Viewer →
+            </button>
+            <button
+              className="toolbar-btn"
+              style={{ padding: '3px 10px', fontSize: 11 }}
+              disabled={!!error || !raw.trim()}
+              title="Send to Viewer in Schema Mode"
+              onClick={() => onSendToViewer(formatted, 'schema')}
+            >
+              Schema Mode →
+            </button>
+          </div>
+          <textarea
+            className="json-textarea"
+            value={formatted}
+            readOnly
+            placeholder={'Formatted JSON will appear here…'}
+            spellCheck={false}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [showWelcome, setShowWelcome] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('viewer');
+  const [viewMode, setViewMode] = useState<ViewMode>('full');
   const [jsonText, setJsonText] = useState(SAMPLE_JSON);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -343,16 +453,27 @@ function App() {
   const [exporting, setExporting] = useState(false);
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  const parsedJson = useMemo(() => {
+    try { return JSON.parse(jsonText); } catch { return null; }
+  }, [jsonText]);
+
   const graph = useMemo(() => {
+    if (!parsedJson) { setError('Invalid JSON'); return null; }
     try {
-      const parsed = JSON.parse(jsonText);
       setError(null);
-      return jsonToGraph(parsed);
+      return jsonToGraph(parsedJson);
     } catch (e) {
       setError((e as Error).message);
       return null;
     }
-  }, [jsonText]);
+  }, [parsedJson]);
+
+  const schemaGraph = useMemo(() => {
+    if (!parsedJson) return null;
+    try { return jsonToSchemaGraph(parsedJson); } catch { return null; }
+  }, [parsedJson]);
+
+  const activeGraph = viewMode === 'schema' ? schemaGraph : graph;
 
   // ── Node click → highlight in textarea ──────────────────────────
   const handleNodeClick: NodeMouseHandler = useCallback((_evt, node) => {
@@ -458,8 +579,8 @@ function App() {
     }
   }, []);
 
-  const nodeCount = graph?.nodes.length ?? 0;
-  const edgeCount = graph?.edges.length ?? 0;
+  const nodeCount = activeGraph?.nodes.length ?? 0;
+  const edgeCount = activeGraph?.edges.length ?? 0;
 
 
   return (
@@ -470,6 +591,15 @@ function App() {
         <div className="toolbar-sep" />
 
         <div className="tabs">
+          <button
+            className={`tab-btn ${activeTab === 'format' ? 'active' : ''}`}
+            onClick={() => setActiveTab('format')}
+          >
+            <svg viewBox="0 0 16 16" fill="currentColor" style={{ width: 13, height: 13 }}>
+              <path d="M2.75 2.5a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25V2.75a.25.25 0 0 0-.25-.25ZM1 2.75C1 1.784 1.784 1 2.75 1h10.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 13.25 15H2.75A1.75 1.75 0 0 1 1 13.25ZM4 7.75A.75.75 0 0 1 4.75 7h6.5a.75.75 0 0 1 0 1.5h-6.5A.75.75 0 0 1 4 7.75Zm0 2.5a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75ZM4.75 4a.75.75 0 0 0 0 1.5h6.5a.75.75 0 0 0 0-1.5Z"/>
+            </svg>
+            Format
+          </button>
           <button
             className={`tab-btn ${activeTab === 'viewer' ? 'active' : ''}`}
             onClick={() => setActiveTab('viewer')}
@@ -532,9 +662,22 @@ function App() {
 
         {activeTab === 'viewer' && (
           <button
+            className={`toolbar-btn ${viewMode === 'schema' ? 'active-compare' : ''}`}
+            onClick={() => setViewMode(m => m === 'full' ? 'schema' : 'full')}
+            title="Toggle schema mode — collapses arrays, shows types only"
+          >
+            <svg viewBox="0 0 16 16" fill="currentColor" style={{ width: 14, height: 14 }}>
+              <path d="M1.75 2.5a.25.25 0 0 0-.25.25v2.5c0 .138.112.25.25.25h2.5A.25.25 0 0 0 4.5 5.25v-2.5a.25.25 0 0 0-.25-.25Zm0 5a.25.25 0 0 0-.25.25v2.5c0 .138.112.25.25.25h2.5a.25.25 0 0 0 .25-.25v-2.5a.25.25 0 0 0-.25-.25Zm5-5a.25.25 0 0 0-.25.25v2.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-2.5a.25.25 0 0 0-.25-.25Zm0 5a.25.25 0 0 0-.25.25v2.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-2.5a.25.25 0 0 0-.25-.25Z"/>
+            </svg>
+            {viewMode === 'schema' ? 'Schema Mode' : 'Schema Mode'}
+          </button>
+        )}
+
+        {activeTab === 'viewer' && (
+          <button
             className="toolbar-btn primary"
             onClick={() => setShowExport(true)}
-            disabled={!graph || exporting}
+            disabled={!activeGraph || exporting}
             title="Export to image"
           >
             <svg viewBox="0 0 16 16" fill="currentColor">
@@ -545,12 +688,19 @@ function App() {
           </button>
         )}
 
-        {activeTab === 'viewer' && graph && (
+        {activeTab === 'viewer' && activeGraph && (
           <span className="toolbar-info">
             {nodeCount} nodes · {edgeCount} edges
           </span>
         )}
       </div>
+
+      {/* ── Format tab ── */}
+      {activeTab === 'format' && (
+        <FormatView
+          onSendToViewer={(text, mode = 'full') => { setJsonText(text); setViewMode(mode); setActiveTab('viewer'); }}
+        />
+      )}
 
       {/* ── Compare tab ── */}
       {activeTab === 'compare' && <CompareView />}
@@ -599,11 +749,11 @@ function App() {
 
         {/* Canvas */}
         <div className="canvas-area" ref={canvasRef}>
-          {graph ? (
+          {activeGraph ? (
             <ReactFlowProvider>
               <FlowCanvas
-                nodes={graph.nodes}
-                edges={graph.edges}
+                nodes={activeGraph.nodes}
+                edges={activeGraph.edges}
                 selectedNodeId={selectedNodeId}
                 onNodeClick={handleNodeClick}
               />

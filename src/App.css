@@ -368,6 +368,60 @@
 }
 .modal-close:hover { background: #30363d; color: #c9d1d9; }
 
+/* ── Format / Pre-process tab ── */
+.format-root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.format-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 16px;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  flex-shrink: 0;
+}
+
+.format-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.format-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid #30363d;
+}
+.format-panel:last-child { border-right: none; }
+
+.format-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  font-size: 11px;
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+/* ── Schema node tweaks ── */
+.schema-node .json-node-body { padding: 3px 0; }
+.schema-array-header { background: rgba(247,129,102,0.06); border-bottom: 1px solid #21262d; }
+.schema-ref-row .json-val { opacity: 0.7; }
+.schema-footer { font-style: italic; }
+
 /* ── Excel / Schema View ── */
 .excel-root {
   display: flex;
