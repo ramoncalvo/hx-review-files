@@ -1122,3 +1122,239 @@
 .react-flow__minimap { background: #161b22; border: 1px solid #30363d; border-radius: 6px; }
 .react-flow__edge-path { stroke: #30363d; }
 .react-flow__edge.selected .react-flow__edge-path { stroke: #58a6ff; }
+
+/* ── Excel Diff tab ── */
+.excel-diff-root {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  background: #0d1117;
+  color: #c9d1d9;
+  font-size: 12px;
+}
+
+.excel-diff-pickers {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #30363d;
+  background: #161b22;
+  flex-shrink: 0;
+}
+
+.excel-diff-vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #484f58;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+.excel-picker {
+  flex: 1;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  background: #0d1117;
+  overflow: hidden;
+}
+
+.excel-picker-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+}
+
+.excel-picker-name {
+  font-size: 11px;
+  color: #8b949e;
+  font-family: ui-monospace, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.excel-picker-sheets {
+  display: flex;
+  gap: 4px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #21262d;
+  flex-wrap: wrap;
+}
+
+.sheet-tab {
+  padding: 2px 10px;
+  border-radius: 4px;
+  border: 1px solid #30363d;
+  background: #21262d;
+  color: #8b949e;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.sheet-tab:hover { background: #30363d; color: #c9d1d9; }
+.sheet-tab.active { background: rgba(88,166,255,0.15); border-color: #58a6ff; color: #58a6ff; }
+
+.excel-picker-meta {
+  padding: 4px 10px;
+  font-size: 10px;
+  color: #484f58;
+  font-family: ui-monospace, monospace;
+}
+
+/* ── Options bar ── */
+.excel-diff-options {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #30363d;
+  background: #161b22;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.diff-option-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #8b949e;
+  font-weight: 500;
+}
+
+.diff-select {
+  padding: 3px 8px;
+  border-radius: 5px;
+  border: 1px solid #30363d;
+  background: #21262d;
+  color: #c9d1d9;
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  cursor: pointer;
+  outline: none;
+}
+.diff-select:focus { border-color: #58a6ff; }
+
+.diff-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.diff-stat-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 5px;
+  border: 1px solid #30363d;
+  background: #21262d;
+  color: #8b949e;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.diff-stat-btn:hover { background: #30363d; color: #c9d1d9; }
+.diff-stat-btn.active { background: rgba(88,166,255,0.12); border-color: #58a6ff; color: #58a6ff; }
+.diff-stat-btn[data-status="added"].active   { background: rgba(63,185,80,0.12);  border-color: #3fb950; color: #3fb950; }
+.diff-stat-btn[data-status="removed"].active { background: rgba(248,81,73,0.12);  border-color: #f85149; color: #f85149; }
+.diff-stat-btn[data-status="modified"].active{ background: rgba(255,166,87,0.12); border-color: #ffa657; color: #ffa657; }
+.diff-stat-btn[data-status="unchanged"].active { background: rgba(139,148,158,0.1); border-color: #484f58; color: #8b949e; }
+
+.diff-stat-icon {
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* ── Diff table ── */
+.excel-diff-table-wrap {
+  flex: 1;
+  overflow: auto;
+}
+
+.excel-diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.excel-diff-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.excel-diff-table th {
+  background: #161b22;
+  color: #8b949e;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #30363d;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.excel-diff-table td {
+  padding: 4px 10px;
+  border-bottom: 1px solid #21262d;
+  vertical-align: middle;
+  white-space: nowrap;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.col-status { width: 28px; padding: 0 4px !important; text-align: center; }
+.col-key    { width: 80px; color: #8b949e; font-size: 10px; }
+.col-data   { color: #c9d1d9; }
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+.status-badge.added    { background: rgba(63,185,80,0.2);  color: #3fb950; }
+.status-badge.removed  { background: rgba(248,81,73,0.2);  color: #f85149; }
+.status-badge.modified { background: rgba(255,166,87,0.2); color: #ffa657; }
+.status-badge.unchanged{ background: transparent; color: #484f58; }
+
+.added-cell   { background: rgba(63,185,80,0.12);  color: #56d364; }
+.removed-cell { background: rgba(248,81,73,0.12);  color: #ff7b72; }
+
+.modified-key { font-size: 10px; }
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 12px;
+  color: #484f58;
+  padding: 48px 24px;
+}
+.empty-state p { font-size: 13px; margin: 0; }

@@ -18,6 +18,7 @@ import JsonNode from './components/JsonNode';
 import SchemaNode from './components/SchemaNode';
 import CompareView from './components/CompareView';
 import ExcelView from './components/ExcelView';
+import ExcelDiff from './components/ExcelDiff';
 import WelcomeModal from './components/WelcomeModal';
 import { jsonToGraph } from './utils/jsonToGraph';
 import type { NodeData } from './utils/jsonToGraph';
@@ -25,7 +26,7 @@ import { jsonToSchemaGraph } from './utils/jsonToSchema';
 import type { SchemaNodeData } from './utils/jsonToSchema';
 import { findKeyRange, getPathAtCursor, scrollTextareaToSelection } from './utils/jsonSync';
 
-type Tab = 'format' | 'viewer' | 'compare' | 'schema';
+type Tab = 'format' | 'viewer' | 'compare' | 'schema' | 'excel-diff';
 type ViewMode = 'full' | 'schema';
 
 const nodeTypes = { jsonNode: JsonNode, schemaNode: SchemaNode };
@@ -632,6 +633,15 @@ function App() {
             </svg>
             Schema
           </button>
+          <button
+            className={`tab-btn ${activeTab === 'excel-diff' ? 'active' : ''}`}
+            onClick={() => setActiveTab('excel-diff')}
+          >
+            <svg viewBox="0 0 16 16" fill="currentColor" style={{ width: 13, height: 13 }}>
+              <path d="M8.75 1.75a.75.75 0 0 0-1.5 0v1.5h-1.5a.75.75 0 0 0 0 1.5h1.5v1.5a.75.75 0 0 0 1.5 0v-1.5h1.5a.75.75 0 0 0 0-1.5h-1.5ZM1.5 9.25a.75.75 0 0 1 .75-.75h11.5a.75.75 0 0 1 0 1.5H2.25a.75.75 0 0 1-.75-.75Zm0 3a.75.75 0 0 1 .75-.75h11.5a.75.75 0 0 1 0 1.5H2.25a.75.75 0 0 1-.75-.75Z"/>
+            </svg>
+            Diff Files
+          </button>
         </div>
 
         {activeTab === 'viewer' && <div className="toolbar-sep" />}
@@ -712,6 +722,9 @@ function App() {
 
       {/* ── Schema tab ── */}
       {activeTab === 'schema' && <ExcelView jsonText={jsonText} />}
+
+      {/* ── Excel Diff tab ── */}
+      {activeTab === 'excel-diff' && <ExcelDiff />}
 
       {/* ── Main workspace ── */}
       <div className="workspace" style={{ display: activeTab === 'viewer' ? 'flex' : 'none' }}>
